@@ -1,6 +1,7 @@
 package client.managers;
 
 import client.ChatClient;
+import client.utils.FileUtils;
 import common.Message;
 
 import javax.swing.*;
@@ -41,10 +42,9 @@ public class FileManager {
         if (result == JFileChooser.APPROVE_OPTION) {
             selectedFile = fileChooser.getSelectedFile();
             long fileSize = selectedFile.length();
-            String fileSizeStr = formatFileSize(fileSize);
 
             JOptionPane.showMessageDialog(chatClient,
-                    "已选择文件：" + selectedFile.getName() + "\n文件大小：" + fileSizeStr);
+                    "已选择文件：" + selectedFile.getName() + "\n文件大小：" + FileUtils.formatFileSize(fileSize));
         }
     }
 

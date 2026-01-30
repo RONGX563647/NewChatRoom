@@ -2,10 +2,11 @@ package client.handler;
 
 import client.ChatClient;
 import client.ui.ChatMainUI;
+import client.utils.FileUtils;
+import client.managers.DataManager;
 import common.Message;
 
 import javax.swing.*;
-import java.awt.Point;
 
 /**
  * 消息处理器类
@@ -14,10 +15,12 @@ import java.awt.Point;
 public class MessageHandler {
     private ChatClient chatClient;
     private ChatMainUI chatMainUI;
+    private DataManager dataManager;
 
     public MessageHandler(ChatClient chatClient, ChatMainUI chatMainUI) {
         this.chatClient = chatClient;
         this.chatMainUI = chatMainUI;
+        this.dataManager = new DataManager(chatClient);
     }
 
     /**
@@ -123,7 +126,7 @@ public class MessageHandler {
     private void handlePrivateFile(Message message) {
         SwingUtilities.invokeLater(() -> {
             chatClient.getChatArea().append("【系统消息】" + message.getSender() + " 发送私聊文件：" + 
-                message.getFileName() + "（大小：" + formatFileSize(message.getFileSize()) + "）\n");
+                message.getFileName() + "（大小：" + FileUtils.formatFileSize(message.getFileSize()) + "）\n");
             saveBytesToFile(message.getFileData(), message.getFileName());
         });
     }
@@ -135,7 +138,7 @@ public class MessageHandler {
         SwingUtilities.invokeLater(() -> {
             chatClient.getChatArea().append("【系统消息】" + message.getSender() + " 发送群文件[" + 
                 message.getReceiver() + "]：" + message.getFileName() + "（大小：" + 
-                formatFileSize(message.getFileSize()) + "）\n");
+                FileUtils.formatFileSize(message.getFileSize()) + "）\n");
             saveBytesToFile(message.getFileData(), message.getFileName());
         });
     }
@@ -207,21 +210,7 @@ public class MessageHandler {
      * 保存字节数组为文件
      */
     private void saveBytesToFile(byte[] data, String fileName) {
-        // 调用ChatClient中的方法
-        chatClient.saveBytesToFile(data, fileName);
-    }
-
-    /**
-     * 格式化文件大小（字节→KB/MB）
-     */
-    private String formatFileSize(long size) {
-        if (size < 1024) {
-            return size + " B";
-        } else if (size < 1024 * 1024) {
-            return String.format("%.2f KB", size / 1024.0);
-        } else {
-            return String.format("%.2f MB", size / (1024.0 * 1024));
-        }
+        dataManager.saveBytesToFile(data, fileName);
     }
 
     private void shakeWindow() {
