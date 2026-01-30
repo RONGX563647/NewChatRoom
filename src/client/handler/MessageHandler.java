@@ -2,15 +2,10 @@ package client.handler;
 
 import client.ChatClient;
 import client.ui.ChatMainUI;
-import common.Group;
 import common.Message;
 
 import javax.swing.*;
-import java.awt.*;
-import java.io.File;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.awt.Point;
 
 /**
  * 消息处理器类
@@ -229,45 +224,7 @@ public class MessageHandler {
         }
     }
 
-    /**
-     * 执行窗口抖动动画（线程安全）
-     */
     private void shakeWindow() {
-        // 防止重复抖动
-        if (chatClient.isShaking()) {
-            return;
-        }
-        chatClient.setShaking(true);
-
-        // 记录窗口原始位置
-        Point originalLocation = chatClient.getLocation();
-        int shakeTimes = 8; // 抖动次数
-        int shakeOffset = 5; // 抖动偏移量（像素）
-        Timer timer = new Timer();
-
-        timer.scheduleAtFixedRate(new TimerTask() {
-            int count = 0;
-            // 抖动方向：左右上下交替
-            int[] dx = {shakeOffset, -shakeOffset, shakeOffset, -shakeOffset, 
-                        shakeOffset, -shakeOffset, shakeOffset, -shakeOffset};
-            int[] dy = {shakeOffset, -shakeOffset, -shakeOffset, shakeOffset, 
-                        shakeOffset, -shakeOffset, -shakeOffset, shakeOffset};
-
-            @Override
-            public void run() {
-                SwingUtilities.invokeLater(() -> {
-                    if (count < shakeTimes) {
-                        // 移动窗口
-                        chatClient.setLocation(originalLocation.x + dx[count], originalLocation.y + dy[count]);
-                        count++;
-                    } else {
-                        // 恢复原始位置，停止抖动
-                        chatClient.setLocation(originalLocation);
-                        timer.cancel();
-                        chatClient.setShaking(false);
-                    }
-                });
-            }
-        }, 0, 50); // 每50毫秒抖动一次，共8次（400毫秒）
+        chatClient.shakeWindow();
     }
 }

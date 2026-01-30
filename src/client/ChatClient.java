@@ -3,19 +3,16 @@ package client;
 import common.Group;
 import common.Message;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.TimerTask;
-import java.util.Timer;
 import java.util.UUID;
 
 import client.network.NetworkManager;
@@ -40,20 +37,10 @@ public class ChatClient extends JFrame {
     private JTextField inputField;   // 消息输入框
     private JComboBox<String> chatTypeBox; // 聊天类型选择（私聊/群聊）
     private JComboBox<String> targetBox; // 私聊：用户名 | 群聊：群ID（显示群名）
-    private JList<String> userList;  // 在线用户列表
     private DefaultListModel<String> userListModel; // 用户列表数据模型
-    private JButton fileBtn; // 新增：选择文件按钮
-    private File selectedFile; // 新增：选中的文件
-    private JButton shakeBtn; // 新增：窗口抖动按钮
-
-    // 窗口抖动相关：记录原始位置，避免重复抖动
-    private Point originalLocation;
-    private boolean isShaking = false;
 
     // 新增：群聊相关（存储群ID和群名的映射，便于显示）
     private DefaultListModel<String> groupListModel; // 群列表显示模型（显示群名）
-    private JList<String> groupList;
-    private JPanel groupPanel; // 群列表面板
     private Map<String, String> groupIdToNameMap = new java.util.HashMap<>(); // 群ID→群名
     private Map<String, String> groupNameToIdMap = new java.util.HashMap<>(); // 群名→群ID
 
@@ -64,11 +51,8 @@ public class ChatClient extends JFrame {
     private JTextField registerAccountField; // 注册账号输入框
     private JPasswordField registerPwdField; // 注册密码输入框
 
-    // 字体相关（新增）
-    private JComboBox<String> fontSelectBox; // 字体选择下拉框
-    private Font currentChatFont; // 当前选中的聊天字体
-
     public ChatClient() {
+        uiComponentFactory = new UIComponentFactory();
         // 启动时先显示登录注册界面
         showLoginRegisterFrame();
     }
@@ -114,12 +98,32 @@ public class ChatClient extends JFrame {
         return groupListModel;
     }
 
-    public boolean isShaking() {
-        return isShaking;
+    public String getUsername() {
+        return username;
     }
 
-    public void setShaking(boolean shaking) {
-        isShaking = shaking;
+    public NetworkManager getNetworkManager() {
+        return networkManager;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public JFrame getLoginRegisterFrame() {
+        return loginRegisterFrame;
+    }
+
+    public JPasswordField getLoginPwdField() {
+        return loginPwdField;
+    }
+
+    public JTextField getRegisterAccountField() {
+        return registerAccountField;
+    }
+
+    public JPasswordField getRegisterPwdField() {
+        return registerPwdField;
     }
 
     /**
@@ -142,7 +146,7 @@ public class ChatClient extends JFrame {
         titlePanel.add(titleLabel);
 
         // 核心登录面板（美化的圆角面板）
-        JPanel loginPanel = createRoundedPanel(Color.WHITE, 30);
+        JPanel loginPanel = uiComponentFactory.createRoundedPanel(Color.WHITE, 30);
         loginPanel.setLayout(new GridBagLayout()); // 精准布局
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10); // 控件间距
@@ -159,7 +163,7 @@ public class ChatClient extends JFrame {
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        serverIpField = createStyledTextField(); // 复用美化的输入框
+        serverIpField = uiComponentFactory.createStyledTextField();
         serverIpField.setText("127.0.0.1"); // 默认显示本地IP
         serverIpField.setToolTipText("请输入服务器的IP地址（如192.168.1.100）");
         loginPanel.add(serverIpField, gbc);
@@ -177,7 +181,7 @@ public class ChatClient extends JFrame {
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        loginAccountField = createStyledTextField();
+        loginAccountField = uiComponentFactory.createStyledTextField();
         loginPanel.add(loginAccountField, gbc);
 
         // 密码标签 + 密码框（原有逻辑，gridy改为2）
@@ -193,7 +197,7 @@ public class ChatClient extends JFrame {
         gbc.gridy = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        loginPwdField = createStyledPasswordField();
+        loginPwdField = uiComponentFactory.createStyledPasswordField();
         loginPanel.add(loginPwdField, gbc);
 
         // 按钮面板（原有逻辑，gridy改为3）
@@ -206,9 +210,9 @@ public class ChatClient extends JFrame {
         btnPanel.setOpaque(false);
         btnPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        JButton loginBtn = createStyledButton("登录");
-        JButton toRegisterBtn = createStyledButton("去注册");
-        JButton findPwdBtn = createStyledButton("找回密码");
+        JButton loginBtn = uiComponentFactory.createStyledButton("登录");
+        JButton toRegisterBtn = uiComponentFactory.createStyledButton("去注册");
+        JButton findPwdBtn = uiComponentFactory.createStyledButton("找回密码");
 
         btnPanel.add(loginBtn);
         btnPanel.add(Box.createHorizontalStrut(15));
@@ -409,7 +413,7 @@ public class ChatClient extends JFrame {
         registerDialog.getContentPane().setBackground(new Color(240, 248, 255));
 
         // 注册面板（美化的圆角面板）
-        JPanel registerPanel = createRoundedPanel(Color.WHITE, 20);
+        JPanel registerPanel = uiComponentFactory.createRoundedPanel(Color.WHITE, 20);
         registerPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 10, 10, 10);
@@ -426,7 +430,7 @@ public class ChatClient extends JFrame {
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        registerAccountField = createStyledTextField();
+        registerAccountField = uiComponentFactory.createStyledTextField();
         registerPanel.add(registerAccountField, gbc);
 
         // 密码标签 + 密码框
@@ -442,7 +446,7 @@ public class ChatClient extends JFrame {
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        registerPwdField = createStyledPasswordField();
+        registerPwdField = uiComponentFactory.createStyledPasswordField();
         registerPanel.add(registerPwdField, gbc);
 
         // 按钮面板
@@ -453,8 +457,8 @@ public class ChatClient extends JFrame {
         gbc.weightx = 0;
         JPanel btnPanel = new JPanel();
         btnPanel.setOpaque(false);
-        JButton registerBtn = createStyledButton("注册");
-        JButton cancelBtn = createStyledButton("取消");
+        JButton registerBtn = uiComponentFactory.createStyledButton("注册");
+        JButton cancelBtn = uiComponentFactory.createStyledButton("取消");
         btnPanel.add(registerBtn);
         btnPanel.add(Box.createHorizontalStrut(15));
         btnPanel.add(cancelBtn);
@@ -529,73 +533,36 @@ public class ChatClient extends JFrame {
     private LoginRegisterUI loginRegisterUI;
     private ChatMainUI chatMainUI;
     private MessageHandler messageHandler;
+    private UIComponentFactory uiComponentFactory;
+
+    // Manager组件
+    private client.managers.ChatManager chatManager;
+    private client.managers.FileManager fileManager;
+    private client.managers.DataManager dataManager;
+    private client.managers.WindowManager windowManager;
     
-    /**
-     * 初始化主界面
-     */
-    private void initChatUI() {
-        // 创建UI组件实例
+    public void initChatUI() {
         chatMainUI = new ChatMainUI(this);
         messageHandler = new MessageHandler(this, chatMainUI);
         
-        // 使用UI组件初始化界面
         chatMainUI.initChatUI(username);
         
-        // 设置界面组件引用
         chatArea = chatMainUI.getChatArea();
         inputField = chatMainUI.getInputField();
         chatTypeBox = chatMainUI.getChatTypeBox();
         targetBox = chatMainUI.getTargetBox();
-        userList = chatMainUI.getUserList();
         userListModel = chatMainUI.getUserListModel();
-        fileBtn = chatMainUI.getFileBtn();
-        shakeBtn = chatMainUI.getShakeBtn();
         groupListModel = chatMainUI.getGroupListModel();
-        groupList = chatMainUI.getGroupList();
-        groupPanel = chatMainUI.getGroupPanel();
-        fontSelectBox = chatMainUI.getFontSelectBox();
-        currentChatFont = chatMainUI.getCurrentChatFont();
         
-        // 窗口设置
+        chatManager = new client.managers.ChatManager(this);
+        fileManager = new client.managers.FileManager(this);
+        dataManager = new client.managers.DataManager(this);
+        windowManager = new client.managers.WindowManager(this);
+        
         setTitle("Java Socket 聊天室(账号：" + username + ")");
         setSize(800, 500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-    }
-
-    /**
-     * 截取整个屏幕并保存为临时PNG文件
-     * @return 生成的临时截图文件，失败返回null
-     */
-    private File captureFullScreen() {
-        try {
-            // 1. 创建Robot对象（用于截图）
-            Robot robot = new Robot();
-
-            // 2. 获取屏幕尺寸（多屏也能覆盖）
-            Rectangle screenRect = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-
-            // 3. 截取屏幕
-            BufferedImage screenImage = robot.createScreenCapture(screenRect);
-
-            // 4. 创建临时文件（唯一文件名，避免冲突）
-            String tempFileName = "screenshot_" + UUID.randomUUID() + ".png";
-            File tempFile = new File(System.getProperty("java.io.tmpdir"), tempFileName);
-
-            // 5. 保存截图为PNG格式
-            ImageIO.write(screenImage, "PNG", tempFile);
-
-            JOptionPane.showMessageDialog(this, "截图成功！临时文件路径：" + tempFile.getAbsolutePath());
-            return tempFile;
-
-        } catch (AWTException ex) {
-            JOptionPane.showMessageDialog(this, "截图权限不足！请检查是否允许程序访问屏幕。");
-            ex.printStackTrace();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "保存截图失败：" + ex.getMessage());
-            ex.printStackTrace();
-        }
-        return null;
     }
 
     // ========== 新增群聊相关对话框 ==========
@@ -743,8 +710,7 @@ public class ChatClient extends JFrame {
                 Message getUsersMsg = new Message(Message.Type.GET_ONLINE_USERS, username, "", "");
                 networkManager.sendMessage(getUsersMsg);
 
-                // 启动线程监听服务器消息
-                new MessageListener().start();
+                startMessageListener();
             } else {
                 JOptionPane.showMessageDialog(loginRegisterFrame, response.getContent());
                 // 密码错误时清空密码框
@@ -759,483 +725,55 @@ public class ChatClient extends JFrame {
         }
     }
 
-    // 新增：重置Socket的辅助方法（客户端）
-    private void resetSocket() {
+    public void resetSocket() {
         if (networkManager != null) {
             networkManager.resetSocket();
         }
     }
 
-    /**
-     * 发送消息
-     */
-    public void sendMessage() {
-        String content = inputField.getText().trim();
-        if (content.isEmpty()) {
-            return;
-        }
-
-        try {
-            Message.Type type;
-            String targetName = (String) targetBox.getSelectedItem();
-            String target = null; // 最终发送给服务端的目标（群ID/用户名）
-
-            if (chatTypeBox.getSelectedItem().equals("群聊")) {
-                type = Message.Type.GROUP_CHAT;
-                // 优先从ClientProperty获取群ID（更可靠）
-                target = (String) targetBox.getClientProperty("groupId");
-                // 兜底：从映射中获取
-                if (target == null || target.isEmpty()) {
-                    target = groupNameToIdMap.get(targetName);
-                }
-                // 空值校验（关键）
-                if (target == null || target.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "未找到该群聊的ID，无法发送消息！");
-                    return;
-                }
-            } else {
-                type = Message.Type.PRIVATE_CHAT;
-                target = targetName; // 私聊直接用用户名
-            }
-
-            // 发送消息
-            Message message = new Message(type, username, target, content);
-            networkManager.sendMessage(message);
-
-            // 本地显示发送的消息
-            if (type == Message.Type.GROUP_CHAT) {
-                chatArea.append("【群聊-" + target + "】我：" + content + "\n");
-            } else {
-                chatArea.append("【私聊-" + target + "】我：" + content + "\n");
-            }
-
-            // 清空输入框
-            inputField.setText("");
-        } catch (Exception   e) {
-            JOptionPane.showMessageDialog(this, "发送消息失败：" + e.getMessage());
-            e.printStackTrace();
-        }
+    public void startMessageListener() {
+        MessageListener listener = new MessageListener(networkManager, messageHandler, chatArea);
+        listener.start();
     }
 
-    // 新增：选择文件
-    public void selectFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        int result = fileChooser.showOpenDialog(this);
-
-        if (result == JFileChooser.APPROVE_OPTION) {
-            selectedFile = fileChooser.getSelectedFile();
-            chatArea.append("【系统消息】已选择文件：" + selectedFile.getName() + "（大小：" + formatFileSize(selectedFile.length()) + "）\n");
-            // 选择文件后，弹出确认发送对话框
-            int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "是否发送文件：" + selectedFile.getName() + " 到 " + targetBox.getSelectedItem() + "？",
-                    "确认发送文件",
-                    JOptionPane.YES_NO_OPTION
-            );
-            if (confirm == JOptionPane.YES_OPTION) {
-                sendFile(); // 发送选中的文件
-            }
-        }
-    }
-
-    // 新增：发送文件
-    private void sendFile() {
-        if (selectedFile == null || !selectedFile.exists()) {
-            JOptionPane.showMessageDialog(this, "请先选择有效的文件！");
-            return;
-        }
-
-        try {
-            // 读取文件为字节数组（简易版：适合小文件，大文件需分块）
-            byte[] fileData = readFileToBytes(selectedFile);
-            if (fileData == null) {
-                chatArea.append("【系统消息】文件读取失败！\n");
-                return;
-            }
-
-            // 确定消息类型（私聊文件/群聊文件）
-            Message.Type type;
-            String targetName = (String) targetBox.getSelectedItem();
-            String target = null;
-
-            if (chatTypeBox.getSelectedItem().equals("群聊")) {
-                type = Message.Type.FILE_GROUP;
-                target = (String) targetBox.getClientProperty("groupId");
-                if (target == null || target.isEmpty()) {
-                    target = groupNameToIdMap.get(targetName);
-                }
-                if (target == null || target.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "未找到该群聊的ID，无法发送文件！");
-                    return;
-                }
-            } else {
-                type = Message.Type.FILE_PRIVATE;
-                target = targetName;
-            }
-
-            // 构造文件消息并发送
-            Message fileMsg = new Message(
-                    type,
-                    username,
-                    target,
-                    selectedFile.getName(),
-                    selectedFile.length(),
-                    fileData
-            );
-            networkManager.sendMessage(fileMsg);
-
-            chatArea.append("【系统消息】文件 " + selectedFile.getName() + " 发送成功！\n");
-            selectedFile = null; // 发送后清空选中的文件
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "发送文件失败：" + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    // 新增：读取文件为字节数组
-    private byte[] readFileToBytes(File file) {
-        try (FileInputStream fis = new FileInputStream(file);
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[1024 * 8]; // 8KB缓冲区
-            int len;
-            while ((len = fis.read(buffer)) != -1) {
-                bos.write(buffer, 0, len);
-            }
-            return bos.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    // 重写：保存字节数组为文件
-    public void saveBytesToFile(byte[] data, String fileName) {
-        // 选择保存路径（默认当前目录）
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File(fileName));
-        int result = fileChooser.showSaveDialog(this);
-
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File saveFile = fileChooser.getSelectedFile();
-            try (FileOutputStream fos = new FileOutputStream(saveFile)) {
-                fos.write(data);
-                chatArea.append("【系统消息】已接收文件：" + fileName + "，保存至：" + saveFile.getAbsolutePath() + "\n");
-            } catch (IOException e) {
-                chatArea.append("【系统消息】文件保存失败：" + e.getMessage() + "\n");
-                e.printStackTrace();
-            }
-        } else {
-            chatArea.append("【系统消息】取消保存文件：" + fileName + "\n");
-        }
-    }
-
-    // 新增：格式化文件大小（字节→KB/MB）
-    private String formatFileSize(long size) {
-        if (size < 1024) {
-            return size + " B";
-        } else if (size < 1024 * 1024) {
-            return String.format("%.2f KB", size / 1024.0);
-        } else {
-            return String.format("%.2f MB", size / (1024.0 * 1024));
-        }
-    }
-
-    // 新增：更新在线用户列表UI
-    private void updateUserList(List<String> onlineUsers) {
-        // 注意：Swing组件更新必须在事件调度线程中执行
-        SwingUtilities.invokeLater(() -> {
-            userListModel.clear();
-            for (String user : onlineUsers) {
-                userListModel.addElement(user);
-            }
-        });
-    }
-    // ========== 新增：更新群列表（线程安全） ==========
-    private void updateGroupList(List<Group> groupList) {
-        SwingUtilities.invokeLater(() -> {
-            groupListModel.clear();
-            groupIdToNameMap.clear      ();
-            groupNameToIdMap.clear();
-
-            for (Group group : groupList) {
-                groupListModel.addElement(group.getGroupName());
-                groupIdToNameMap.put(group.getGroupId(), group.getGroupName());
-                groupNameToIdMap.put(group.getGroupName(), group.getGroupId());
-            }
-
-            // 若当前是群聊模式，更新目标下拉框
-            if (chatTypeBox.getSelectedItem().equals("群聊")) {
-                targetBox.removeAllItems();
-                for (int i = 0; i < groupListModel.size(); i++) {
-                    targetBox.addItem(groupListModel.getElementAt(i));
-                }
-            }
-        });
-    }
-
-    // 新增：发送窗口抖动消息
-    public void sendShakeMessage() {
-        String targetName = (String) targetBox.getSelectedItem();
-        if (targetName == null || targetName.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "请选择聊天目标！");
-            return;
-        }
-
-        try {
-            String target = null;
-            if (chatTypeBox.getSelectedItem().equals("群聊")) {
-                target = (String) targetBox.getClientProperty("groupId");
-                if (target == null || target.isEmpty()) {
-                    target = groupNameToIdMap.get(targetName);
-                }
-                if (target == null || target.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "未找到该群聊的ID，无法发送抖动！");
-                    return;
-                }
-            } else {
-                target = targetName;
-            }
-
-            Message shakeMsg = new Message(Message.Type.SHAKE, username, target);
-            networkManager.sendMessage(shakeMsg);
-
-            // 本地提示
-            if (chatTypeBox.getSelectedItem().equals("群聊")) {
-                chatArea.append("【系统消息】已向群[" + target + "]发送窗口抖动！\n");
-            } else {
-                chatArea.append("【系统消息】已向" + target + "发送窗口抖动！\n");
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "发送抖动失败：" + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    // 新增：执行窗口抖动动画（线程安全）
-    private void shakeWindow() {
-        // 防止重复抖动
-        if (isShaking) {
-            return;
-        }
-        isShaking = true;
-
-        // 记录窗口原始位置
-        originalLocation = this.getLocation();
-        int shakeTimes = 8; // 抖动次数
-        int shakeOffset = 5; // 抖动偏移量（像素）
-        Timer timer = new Timer();
-
-        timer.scheduleAtFixedRate(new TimerTask() {
-            int count = 0;
-            // 抖动方向：左右上下交替
-            int[] dx = {shakeOffset, -shakeOffset, shakeOffset, -shakeOffset, shakeOffset, -shakeOffset, shakeOffset, -shakeOffset};
-            int[] dy = {shakeOffset, -shakeOffset, -shakeOffset, shakeOffset, shakeOffset, -shakeOffset, -shakeOffset, shakeOffset};
-
-            @Override
-            public void run() {
-                SwingUtilities.invokeLater(() -> {
-                    if (count < shakeTimes) {
-                        // 移动窗口
-                        setLocation(originalLocation.x + dx[count], originalLocation.y + dy[count]);
-                        count++;
-                    } else {
-                        // 恢复原始位置，停止抖动
-                        setLocation(originalLocation);
-                        timer.cancel();
-                        isShaking = false;
-                    }
-                });
-            }
-        }, 0, 50); // 每50毫秒抖动一次，共8次（400毫秒）
-    }
-
-
-    /**
-     * 美化按钮：圆角、背景色、悬停效果
-     */
-    private JButton createStyledButton(String text) {
-        JButton button = new JButton(text);
-        // 设置按钮样式
-        button.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        button.setBackground(new Color(64, 158, 255)); // 蓝色主色调
-        button.setForeground(Color.WHITE);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20)); // 内边距
-        button.setFocusPainted(false); // 去掉焦点框
-        button.setBorderPainted(false); // 去掉边框
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR)); // 手型光标
-        // 圆角设置（通过设置按钮的形状）
-        button.setUI(new javax.swing.plaf.basic.BasicButtonUI() {
-            @Override
-            public void installUI(JComponent c) {
-                super.installUI(c);
-                c.setOpaque(false);
-                ((AbstractButton) c).setContentAreaFilled(false);
-            }
-            @Override
-            public void paint(Graphics g, JComponent c) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                // 绘制圆角背景
-                g2.setColor(c.getBackground());
-                g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 8, 8);
-                // 悬停效果
-                if (c instanceof AbstractButton && ((AbstractButton) c).getModel().isRollover()) {
-                    g2.setColor(new Color(84, 172, 255));
-                    g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 8, 8);
-                }
-                super.paint(g2, c);
-                g2.dispose();
-            }
-        });
-        return button;
-    }
-    /**
-     * 创建美化的输入框：圆角、边框
-     */
-    private JTextField createStyledTextField() {
-        JTextField field = new JTextField();
-        field.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        // 设置自定义圆角边框
-        field.setBorder(new RoundBorder(8, new Color(204, 204, 204)));
-        field.setOpaque(true); // 确保背景不透明，显示边框效果
-        field.setBackground(Color.WHITE);
-        return field;
-    }
-    /**
-     * 美化密码框：复用自定义圆角边框
-     */
-    private JPasswordField createStyledPasswordField() {
-        JPasswordField field = new JPasswordField();
-        field.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        field.setBorder(new RoundBorder(8, new Color(204, 204, 204)));
-        field.setOpaque(true);
-        field.setBackground(Color.WHITE);
-        return field;
-    }
-    /**
-     * 创建圆角面板（带背景色和内边距）
-     */
-    private JPanel createRoundedPanel(Color bgColor, int padding) {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-            }
-        };
-        panel.setBackground(bgColor);
-        panel.setBorder(BorderFactory.createEmptyBorder(padding, padding, padding, padding));
-        panel.setOpaque(false); // 透明背景，显示圆角
-        return panel;
-    }
-
-    /**
-     * 自定义圆角边框（替代重写UI的方式）
-     */
-    private class RoundBorder extends javax.swing.border.AbstractBorder {
-        private int radius; // 圆角半径
-        private Color borderColor;
-
-        public RoundBorder(int radius, Color borderColor) {
-            this.radius = radius;
-            this.borderColor = borderColor;
-        }
-
-        @Override
-        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            // 绘制圆角边框
-            g2.setColor(borderColor);
-            g2.drawRoundRect(x + 1, y + 1, width - 3, height - 3, radius, radius);
-            g2.dispose();
-        }
-
-        @Override
-        public Insets getBorderInsets(Component c) {
-            return new Insets(8, 10, 8, 10); // 内边距，和之前保持一致
-        }
-    }
-
-    /**
-     * 监听服务器消息的线程
-     */
-    class MessageListener extends Thread {
-        @Override
-        public void run() {
-            try {
-                Message message;
-                while (true) { // 持续监听消息
-                    message = networkManager.receiveMessage();
-                    if (message != null) {
-                        // 使用消息处理器处理消息
-                        messageHandler.handleMessage(message);
-                    }
-                }
-            } catch (Exception e) { // 捕获所有异常
-                SwingUtilities.invokeLater(() -> {
-                    chatArea.append("【系统消息】与服务器断开连接！\n");
-                });
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * 处理截图功能
-     */
     public void handleScreenshot() {
-        try {
-            // 1. 截取整个屏幕
-            File screenshotFile = captureFullScreen();
-            if (screenshotFile == null || !screenshotFile.exists()) {
-                JOptionPane.showMessageDialog(this, "截图失败！");
-                return;
-            }
+        ScreenshotManager screenshotManager = new ScreenshotManager(this);
+        screenshotManager.handleScreenshot(fileManager.getSelectedFile(), fileManager::sendFile, chatTypeBox);
+    }
 
-            // 2. 确认发送（可选，提升体验）
-            int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "截图已生成，是否发送给当前选中的" + (chatTypeBox.getSelectedItem().equals("群聊") ? "群聊" : "好友") + "？",
-                    "确认发送截图",
-                    JOptionPane.YES_NO_OPTION
-            );
-            if (confirm != JOptionPane.YES_OPTION) {
-                // 用户取消发送，删除临时文件
-                screenshotFile.delete();
-                return;
-            }
+    public void sendMessage() {
+        chatManager.sendMessage();
+    }
 
-            // 3. 复用文件发送逻辑（关键：把截图文件赋值给selectedFile，调用sendFile）
-            selectedFile = screenshotFile;
-            sendFile();
+    public void selectFile() {
+        fileManager.selectFile();
+    }
 
-            // 4. 发送完成后异步删除临时文件（避免占用空间）
-            new Thread(() -> {
-                try {
-                    // 延迟1秒删除（确保文件已发送完成）
-                    Thread.sleep(1000);
-                    if (screenshotFile.exists()) {
-                        screenshotFile.delete();
-                    }
-                } catch (InterruptedException ex) {
-                    ex.printStackTrace();
-                }
-            }).start();
+    public void sendFile() {
+        fileManager.sendFile();
+    }
 
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "截图发送失败：" + ex.getMessage());
-            ex.printStackTrace();
-        }
+    public void saveBytesToFile(byte[] data, String fileName) {
+        dataManager.saveBytesToFile(data, fileName);
+    }
+
+    public void updateUserList(List<String> onlineUsers) {
+        dataManager.updateUserList(onlineUsers);
+    }
+
+    public void updateGroupList(List<Group> groupList) {
+        dataManager.updateGroupList(groupList);
+    }
+
+    public void sendShakeMessage() {
+        chatManager.sendShake();
+    }
+
+    public void shakeWindow() {
+        windowManager.shakeWindow();
     }
 
     public static void main(String[] args) {
-        // Swing界面需在事件调度线程中运行
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
