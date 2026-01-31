@@ -18,15 +18,13 @@ public class UIComponentFactory {
      */
     public static JButton createStyledButton(String text) {
         JButton button = new JButton(text);
-        // 设置按钮样式
         button.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        button.setBackground(new Color(64, 158, 255)); // 蓝色主色调
+        button.setBackground(new Color(7, 193, 96));
         button.setForeground(Color.WHITE);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20)); // 内边距
-        button.setFocusPainted(false); // 去掉焦点框
-        button.setBorderPainted(false); // 去掉边框
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR)); // 手型光标
-        // 圆角设置（通过设置按钮的形状）
+        button.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setUI(new javax.swing.plaf.basic.BasicButtonUI() {
             @Override
             public void installUI(JComponent c) {
@@ -38,13 +36,11 @@ public class UIComponentFactory {
             public void paint(Graphics g, JComponent c) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                // 绘制圆角背景
                 g2.setColor(c.getBackground());
-                g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 8, 8);
-                // 悬停效果
+                g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 6, 6);
                 if (c instanceof AbstractButton && ((AbstractButton) c).getModel().isRollover()) {
-                    g2.setColor(new Color(84, 172, 255));
-                    g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 8, 8);
+                    g2.setColor(new Color(6, 174, 86));
+                    g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 6, 6);
                 }
                 super.paint(g2, c);
                 g2.dispose();
@@ -60,21 +56,16 @@ public class UIComponentFactory {
     public static JTextField createStyledTextField() {
         JTextField field = new JTextField();
         field.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        // 设置自定义圆角边框
-        field.setBorder(new RoundBorder(8, new Color(204, 204, 204)));
-        field.setOpaque(true); // 确保背景不透明，显示边框效果
+        field.setBorder(new RoundBorder(6, new Color(220, 220, 220)));
+        field.setOpaque(true);
         field.setBackground(Color.WHITE);
         return field;
     }
 
-    /**
-     * 美化密码框：复用自定义圆角边框
-     * @return 美化后的密码输入框
-     */
     public static JPasswordField createStyledPasswordField() {
         JPasswordField field = new JPasswordField();
         field.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        field.setBorder(new RoundBorder(8, new Color(204, 204, 204)));
+        field.setBorder(new RoundBorder(6, new Color(220, 220, 220)));
         field.setOpaque(true);
         field.setBackground(Color.WHITE);
         return field;
@@ -104,11 +95,8 @@ public class UIComponentFactory {
         return panel;
     }
 
-    /**
-     * 自定义圆角边框（替代重写UI的方式）
-     */
     public static class RoundBorder extends AbstractBorder {
-        private int radius; // 圆角半径
+        private int radius;
         private Color borderColor;
 
         public RoundBorder(int radius, Color borderColor) {
@@ -120,7 +108,6 @@ public class UIComponentFactory {
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            // 绘制圆角边框
             g2.setColor(borderColor);
             g2.drawRoundRect(x + 1, y + 1, width - 3, height - 3, radius, radius);
             g2.dispose();
@@ -128,7 +115,7 @@ public class UIComponentFactory {
 
         @Override
         public Insets getBorderInsets(Component c) {
-            return new Insets(8, 10, 8, 10); // 内边距，和之前保持一致
+            return new Insets(10, 12, 10, 12);
         }
     }
 }

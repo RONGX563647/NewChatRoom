@@ -261,3 +261,5 @@ public enum Type {
 ---
 
 **Happy Coding! 🚀**
+
+![image-20260131112142608](image-20260131112142608.png)
